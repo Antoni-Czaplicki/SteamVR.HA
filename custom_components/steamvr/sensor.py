@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from config.custom_components.steamvr import SteamVRCoordinator
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
     SensorDeviceClass,
@@ -14,6 +13,7 @@ from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import SteamVRCoordinator
 from .const import DOMAIN
 from .device import VRDeviceActivityLevel
 
