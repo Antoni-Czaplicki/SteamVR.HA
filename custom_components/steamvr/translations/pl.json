@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Proszę odnieść się do dokumentacji, aby upewnić się, że spełnione są wszystkie wymagania.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Nazwa"
+        }
+      }
+    },
+    "error": {
+      "unknown": "Nieznany błąd"
+    },
+    "abort": {
+      "already_configured": "Już skonfigurowano"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "vr_status": {
+        "state": {
+          "unknown": "Nieznany",
+          "idle": "W spoczynku",
+          "user_interaction": "W użyciu",
+          "user_interaction_timeout": "Upłynął limit czasu interakcji użytkownika",
+          "standby": "W gotowości",
+          "idle_timeout": "Upłynął limit czasu bezczynności"
+        }
+      }
+    }
+  }
+}

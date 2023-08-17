@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Please refer to the documentation to make sure all requirements are met.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "Already Configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "vr_status": {
+        "state": {
+          "unknown": "Unknown",
+          "idle": "Idle",
+          "user_interaction": "In use",
+          "user_interaction_timeout": "User interaction timeout",
+          "standby": "Standby",
+          "idle_timeout": "Idle timeout"
+        }
+      }
+    }
+  }
+}
