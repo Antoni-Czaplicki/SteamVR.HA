@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from config.custom_components.steamvr import SteamVRCoordinator
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
@@ -9,10 +8,13 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 
+from . import SteamVRCoordinator
+
 try:
     from homeassistant.helpers.device_registry import DeviceInfo
 except ImportError:
     from homeassistant.helpers.entity import DeviceInfo
+
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
