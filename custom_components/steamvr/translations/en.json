@@ -21,7 +21,7 @@
     "step": {
       "init": {
         "data": {
-          "replace_standby_with_idle": "Replace headset standby status with idle",
+          "replace_standby_with_idle": "Replace headset standby status with idle"
         }
       }
     }
