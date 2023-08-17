@@ -100,11 +100,12 @@ class SteamVRCoordinator(DataUpdateCoordinator):
             "is_openvr_connected" in vr_state_dict
             and vr_state_dict["is_openvr_connected"]
         ):
-            vr_state = dataclass_from_dict(VRState, vr_state_dict)
             if self.config_entry.options.get("replace_standby_with_idle", False) and (
-                vr_state.hmd_activity_level == VRDeviceActivityLevel.standby
+                vr_state_dict["hmd_activity_level"]
+                == VRDeviceActivityLevel.standby.value
             ):
-                vr_state.hmd_activity_level = VRDeviceActivityLevel.idle
+                vr_state_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
+            vr_state = dataclass_from_dict(VRState, vr_state_dict)
             self.async_set_updated_data(vr_state)
         # elif "error" in vr_state_dict and vr_state_dict["error"]:
         #     self.async_set_updated_data(VRState(False, error=vr_state_dict["error"]))
