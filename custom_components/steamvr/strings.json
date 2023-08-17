@@ -16,5 +16,28 @@
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "replace_standby_with_idle": "Replace headset standby status with idle",
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "vr_status": {
+        "state": {
+          "unknown": "Unknown",
+          "idle": "Idle",
+          "user_interaction": "In use",
+          "user_interaction_timeout": "User interaction timeout",
+          "standby": "Standby",
+          "idle_timeout": "Idle timeout"
+        }
+      }
+    }
   }
 }

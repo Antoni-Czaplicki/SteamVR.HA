@@ -1,4 +1,4 @@
-"""Config flow for SteamVR Notifications integration."""
+"""Config flow for SteamVR integration."""
 from __future__ import annotations
 
 import logging
@@ -7,6 +7,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
@@ -14,8 +15,14 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class NFAndroidTVFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SteamVR."""
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return SteamVROptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -45,4 +52,31 @@ class NFAndroidTVFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+
+class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "replace_standby_with_idle",
+                        default=self.config_entry.options.get(
+                            "replace_standby_with_idle", False
+                        ),
+                    ): bool
+                }
+            ),
         )

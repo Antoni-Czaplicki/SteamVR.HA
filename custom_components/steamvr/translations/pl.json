@@ -17,6 +17,15 @@
       "already_configured": "Już skonfigurowano"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "replace_standby_with_idle": "Zastąp status gogli \"W gotowości\" statusem \"W spoczynku\""
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "vr_status": {
