@@ -16,7 +16,7 @@ from .const import DOMAIN
 from .device import VRController, VRDeviceActivityLevel, VRState
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

@@ -1,4 +1,4 @@
-"""Support for SteamVR Notifications notification."""
+"""Support for SteamVR notification."""
 from __future__ import annotations
 
 import json
