@@ -93,6 +93,8 @@ class SteamVRCoordinator(DataUpdateCoordinator):
             except websockets.ConnectionClosed:
                 self.async_set_updated_data(VRState(False))
                 continue
+            finally:
+                self.async_set_updated_data(VRState(False))
 
     def on_message(self, message: str):
         vr_state_dict = json.loads(message)
