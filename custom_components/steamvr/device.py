@@ -25,6 +25,7 @@ class VRController:
 # Define a data class for the state
 @dataclass
 class VRState:
+    type: str = "state"
     is_openvr_connected: bool = False
     hmd_activity_level: VRDeviceActivityLevel = VRDeviceActivityLevel.unknown
     current_application_key: str | None = None
