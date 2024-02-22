@@ -76,7 +76,13 @@ class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             "replace_standby_with_idle", False
                         ),
-                    ): bool
+                    ): bool,
+                    vol.Required(
+                        "port_auto_update",
+                        default=self.config_entry.options.get(
+                            "port_auto_update", True
+                        ),
+                    ): bool,
                 }
             ),
         )

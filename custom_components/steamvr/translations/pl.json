@@ -21,7 +21,8 @@
     "step": {
       "init": {
         "data": {
-          "replace_standby_with_idle": "Zastąp status gogli \"W gotowości\" statusem \"W spoczynku\""
+          "replace_standby_with_idle": "Zastąp status gogli \"W gotowości\" statusem \"W spoczynku\"",
+          "port_auto_update": "Automatyczna aktualizacja portu po jego zmianie w Agencie"
         }
       }
     }

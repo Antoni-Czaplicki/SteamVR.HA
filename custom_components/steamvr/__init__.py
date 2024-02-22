@@ -82,35 +82,63 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         self.config_entry.async_create_background_task(
             self.hass, self.run_server(), "steam_vr_ws"
         )
-        return VRState(False)
+        return VRState(is_openvr_connected=False)
 
     async def run_server(self):
         async for websocket in websockets.connect(self.url):
             try:
                 self.websocket = websocket
                 async for message in websocket:
-                    self.on_message(message)
+                    await self.on_message(message)
             except websockets.ConnectionClosed:
-                self.async_set_updated_data(VRState(False))
+                self.async_set_updated_data(VRState(is_openvr_connected=False))
                 continue
             finally:
-                self.async_set_updated_data(VRState(False))
+                self.async_set_updated_data(VRState(is_openvr_connected=False))
 
-    def on_message(self, message: str):
-        vr_state_dict = json.loads(message)
-        if (
-            "is_openvr_connected" in vr_state_dict
-            and vr_state_dict["is_openvr_connected"]
-        ):
-            if self.config_entry.options.get("replace_standby_with_idle", False) and (
-                vr_state_dict["hmd_activity_level"]
-                == VRDeviceActivityLevel.standby.value
+    async def on_message(self, message: str | bytes):
+        message_dict = json.loads(message)
+        if "type" not in message_dict:
+            # Support for legacy client, will be removed in the future
+            if (
+                "is_openvr_connected" in message_dict
+                and message_dict["is_openvr_connected"]
             ):
-                vr_state_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
-            vr_state = dataclass_from_dict(VRState, vr_state_dict)
-            self.async_set_updated_data(vr_state)
-        # elif "error" in vr_state_dict and vr_state_dict["error"]:
-        #     self.async_set_updated_data(VRState(False, error=vr_state_dict["error"]))
+                if self.config_entry.options.get("replace_standby_with_idle", False) and (
+                    message_dict["hmd_activity_level"]
+                    == VRDeviceActivityLevel.standby.value
+                ):
+                    message_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
+                vr_state = dataclass_from_dict(VRState, message_dict)
+                self.async_set_updated_data(vr_state)
+            # elif "error" in vr_state_dict and vr_state_dict["error"]:
+            #     self.async_set_updated_data(VRState(False, error=vr_state_dict["error"]))
+            return
+        if message_dict["type"] == "state":
+            if (
+                "is_openvr_connected" in message_dict
+                and message_dict["is_openvr_connected"]
+            ):
+                if self.config_entry.options.get("replace_standby_with_idle", False) and (
+                    message_dict["hmd_activity_level"]
+                    == VRDeviceActivityLevel.standby.value
+                ):
+                    message_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
+                vr_state = dataclass_from_dict(VRState, message_dict)
+                self.async_set_updated_data(vr_state)
+                return
+        if message_dict["type"] == "event":
+            if message_dict["event_type"] == "port_changed" and self.config_entry.options.get("port_auto_update", True):
+                entry_data = {**self.config_entry.data}
+                entry_data[CONF_PORT] = message_dict["event_data"]
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=entry_data
+                )
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                )
+                return
+
 
 
 def dataclass_from_dict(_class, d):
