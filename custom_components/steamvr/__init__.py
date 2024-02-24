@@ -5,6 +5,7 @@ import logging
 from dataclasses import fields
 
 import websockets
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
@@ -134,6 +135,12 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=entry_data
                 )
+                persistent_notification.async_create(
+                    self.hass,
+                    f"SteamVR port has changed to {message_dict['event_data']}, configuration has been updated.",
+                    "SteamVR Port Changed",
+                )
+
                 self.hass.async_create_task(
                     self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 )
