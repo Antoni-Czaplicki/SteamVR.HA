@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import voluptuous as vol
+
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.helpers import config_validation as cv, entity_platform
 
 from . import SteamVRCoordinator
 
@@ -30,7 +33,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator = hass.data[DOMAIN][f"{config_entry.entry_id}_coordinator"]
+    coordinator: SteamVRCoordinator = hass.data[DOMAIN][f"{config_entry.entry_id}_coordinator"]
     async_add_entities(
         [
             VRControllerBinarySensor(
@@ -81,6 +84,32 @@ async def async_setup_entry(
                 ),
             ),
         ]
+    )
+
+    async def register_event(call: ServiceCall) -> None:
+        """Register an event."""
+        event = call.data["event"]
+        await coordinator.register_event(event)
+
+    async def unregister_event(call: ServiceCall) -> None:
+        """Unregister an event."""
+        event = call.data["event"]
+        await coordinator.unregister_event(event)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        "register_event",
+        {
+            vol.Required('event'): cv.string,
+        },
+        "register_event",
+    )
+    platform.async_register_entity_service(
+        "unregister_event",
+        {
+            vol.Required('event'): cv.string,
+        },
+        "unregister_event",
     )
 
 

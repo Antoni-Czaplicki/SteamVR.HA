@@ -1,6 +1,11 @@
 register_event:
+  target:
+    entity:
+      integration: steamvr
+      domain: binary_sensor
+      device_class: running
   fields:
-   event:
+    event:
       required: true
       example: "VREvent_ButtonPress"
       selector:
@@ -188,6 +193,11 @@ register_event:
             - "VREvent_VendorSpecific_Reserved_Start"
             - "VREvent_VendorSpecific_Reserved_End"
 unregister_event:
+  target:
+    entity:
+      integration: steamvr
+      domain: binary_sensor
+      device_class: running
   fields:
    event:
       required: true

@@ -86,7 +86,6 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         self.websocket = None
         self.entry_id = config_entry.entry_id
         self.device_id = None
-        hass.async_add_executor_job(self.setup_services)
 
     async def _async_update_data(self):
         self.config_entry.async_create_background_task(
@@ -184,11 +183,11 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 }
                 self.hass.bus.async_fire("steam_vr_event", event_data)
 
-    async def register_event(self, call):
+    async def register_event(self, event):
         """Register SteamVR event.
 
         Args:
-            call: The event to register.
+            event: The event to register.
 
         Raises:
             HomeAssistantError: If there is no websocket connection.
@@ -196,16 +195,16 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         """
         if self.websocket:
             await self.websocket.send(
-                json.dumps({"type": "register_event", "command": call.data["event"]})
+                json.dumps({"type": "register_event", "command": event})
             )
         else:
             raise HomeAssistantError("No websocket connection")
 
-    async def unregister_event(self, call):
+    async def unregister_event(self, event):
         """Unregister SteamVR event.
 
         Args:
-            call: The event to unregister.
+            event: The event to unregister.
 
         Raises:
             HomeAssistantError: If there is no websocket connection.
@@ -213,21 +212,10 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         """
         if self.websocket:
             await self.websocket.send(
-                json.dumps({"type": "unregister_event", "command": call.data["event"]})
+                json.dumps({"type": "unregister_event", "command": event})
             )
         else:
             raise HomeAssistantError("No websocket connection")
-
-    def setup_services(self):
-        """Set up services."""
-        self.hass.services.async_register(
-            DOMAIN, "register_event", self.register_event
-        )
-        self.hass.services.async_register(
-            DOMAIN,
-            "unregister_event",
-            self.unregister_event
-        )
 
 
 def dataclass_from_dict(_class, d):
