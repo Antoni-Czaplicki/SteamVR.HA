@@ -1,0 +1,6 @@
+{
+    "services": {
+      "register_event": "mdi:server-plus",
+      "unregister_event": "mdi:server-minus"
+    }
+  }

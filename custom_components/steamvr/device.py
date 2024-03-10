@@ -4,8 +4,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-# Define an enum type for the activity level
 class VRDeviceActivityLevel(Enum):
+    """Enum representing the activity level of a VR device."""
+
     unknown = -1
     idle = 0
     user_interaction = 1
@@ -14,17 +15,19 @@ class VRDeviceActivityLevel(Enum):
     idle_timeout = 4
 
 
-# Define a data class for the controller
 @dataclass
 class VRController:
+    """Dataclass representing a VR controller."""
+
     is_connected: bool = False
     battery_percentage: int | None = None
     is_charging: bool | None = None
 
 
-# Define a data class for the state
 @dataclass
 class VRState:
+    """Dataclass representing the state of the VR system."""
+
     type: str = "state"
     is_openvr_connected: bool = False
     hmd_activity_level: VRDeviceActivityLevel = VRDeviceActivityLevel.unknown

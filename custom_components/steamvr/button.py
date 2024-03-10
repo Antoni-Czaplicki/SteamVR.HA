@@ -1,4 +1,5 @@
-"""Support for SteamVR binary buttons."""
+"""Support for SteamVR buttons."""
+
 from __future__ import annotations
 
 import json
@@ -50,7 +51,7 @@ async def async_setup_entry(
                 async_generate_entity_id(
                     ENTITY_ID_FORMAT,
                     f"{config_entry.title}_left_controller_identify",
-                    hass=hass
+                    hass=hass,
                 ),
             ),
         ]
@@ -94,12 +95,11 @@ class VRControllerIdentifyButton(ButtonEntity):
             name=self.device_name,
         )
 
-
     async def async_press(self) -> None:
         """Handle the button press."""
         payload = {
             "type": "command",
-            "command": f"vibrate_controller_{self.controller_side}"
+            "command": f"vibrate_controller_{self.controller_side}",
         }
 
         await self.coordinator.websocket.send(json.dumps(payload))

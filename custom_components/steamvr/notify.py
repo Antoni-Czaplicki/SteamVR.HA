@@ -1,21 +1,18 @@
-"""Support for SteamVR notification."""
+"""Support for SteamVR Notifications notification."""
+
 from __future__ import annotations
 
 import json
-import os
-from typing import Any, TextIO
+from typing import Any
 
-import homeassistant.helpers.config_validation as cv
-import homeassistant.util.dt as dt_util
-import voluptuous as vol
 from homeassistant.components.notify import (
     ATTR_DATA,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN
@@ -27,6 +24,8 @@ def get_service(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> SteamVRNotificationService:
     """Get the file notification service."""
+    if discovery_info is None:
+        raise ValueError("Discovery info is missing.")
 
     return SteamVRNotificationService(
         hass.data[DOMAIN][f"{discovery_info['entry_id']}_coordinator"]
@@ -56,4 +55,11 @@ class SteamVRNotificationService(BaseNotificationService):
                 if key in ["imageData", "imagePath", "customProperties"]:
                     payload[key] = val
 
-        await self.coordinator.websocket.send(json.dumps(payload))
+        try:
+            await self.coordinator.websocket.send(json.dumps(payload))
+        except AttributeError as err:
+            raise HomeAssistantError("SteamVR is not connected.") from err
+        except ConnectionError as err:
+            raise HomeAssistantError("SteamVR is not connected.") from err
+        except Exception as err:
+            raise HomeAssistantError("An unknown error occurred.") from err

@@ -1,10 +1,12 @@
 """Config flow for SteamVR integration."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
 import voluptuous as vol
+
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
@@ -40,7 +42,6 @@ class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 title=user_input[CONF_NAME],
                 data=user_input,
             )
-            errors["base"] = error
 
         return self.async_show_form(
             step_id="user",
@@ -56,6 +57,8 @@ class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
+    """Options flow handler for SteamVR integration."""
+
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
@@ -79,9 +82,7 @@ class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
                     ): bool,
                     vol.Required(
                         "port_auto_update",
-                        default=self.config_entry.options.get(
-                            "port_auto_update", True
-                        ),
+                        default=self.config_entry.options.get("port_auto_update", True),
                     ): bool,
                 }
             ),

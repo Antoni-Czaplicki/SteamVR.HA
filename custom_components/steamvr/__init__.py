@@ -1,20 +1,22 @@
 """The SteamVR integration."""
 
+from dataclasses import fields
 import json
 import logging
-from dataclasses import fields
 
 import websockets
+
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import discovery
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr, discovery
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
-from .device import VRController, VRDeviceActivityLevel, VRState
+from .device import VRDeviceActivityLevel, VRState
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
@@ -57,8 +59,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS[1:]
     ):
-        await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket.close()
-        hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator")
+        if (
+            f"{entry.entry_id}_coordinator" in hass.data[DOMAIN]
+            and hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket
+        ):
+            await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket.close()
+            hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator")
 
     return unload_ok
 
@@ -78,6 +84,9 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         self.url = url
         self.config_entry = config_entry
         self.websocket = None
+        self.entry_id = config_entry.entry_id
+        self.device_id = None
+        hass.async_add_executor_job(self.setup_services)
 
     async def _async_update_data(self):
         self.config_entry.async_create_background_task(
@@ -86,6 +95,7 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         return VRState(is_openvr_connected=False)
 
     async def run_server(self):
+        """Connect to the websocket server."""
         async for websocket in websockets.connect(self.url):
             try:
                 self.websocket = websocket
@@ -98,6 +108,12 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 self.async_set_updated_data(VRState(is_openvr_connected=False))
 
     async def on_message(self, message: str | bytes):
+        """Handle incoming messages from the websocket server.
+
+        Args:
+            message (str | bytes): The incoming message.
+
+        """
         message_dict = json.loads(message)
         if "type" not in message_dict:
             # Support for legacy client, will be removed in the future
@@ -105,7 +121,9 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 "is_openvr_connected" in message_dict
                 and message_dict["is_openvr_connected"]
             ):
-                if self.config_entry.options.get("replace_standby_with_idle", False) and (
+                if self.config_entry.options.get(
+                    "replace_standby_with_idle", False
+                ) and (
                     message_dict["hmd_activity_level"]
                     == VRDeviceActivityLevel.standby.value
                 ):
@@ -120,7 +138,9 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 "is_openvr_connected" in message_dict
                 and message_dict["is_openvr_connected"]
             ):
-                if self.config_entry.options.get("replace_standby_with_idle", False) and (
+                if self.config_entry.options.get(
+                    "replace_standby_with_idle", False
+                ) and (
                     message_dict["hmd_activity_level"]
                     == VRDeviceActivityLevel.standby.value
                 ):
@@ -129,7 +149,11 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 self.async_set_updated_data(vr_state)
                 return
         if message_dict["type"] == "event":
-            if message_dict["event_type"] == "port_changed" and self.config_entry.options.get("port_auto_update", True):
+            if message_dict[
+                "event_type"
+            ] == "port_changed" and self.config_entry.options.get(
+                "port_auto_update", True
+            ):
                 entry_data = {**self.config_entry.data}
                 entry_data[CONF_PORT] = message_dict["event_data"]
                 self.hass.config_entries.async_update_entry(
@@ -145,12 +169,71 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                     self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 )
                 return
+            if not self.device_id:
+                device_registry = dr.async_get(self.hass)
+                device_entry = device_registry.async_get_device(
+                    identifiers={(DOMAIN, f"{self.entry_id}_vr_status")}
+                )
+                if device_entry:
+                    self.device_id = device_entry.id
+            if self.device_id:
+                event_data = {
+                    "device_id": self.device_id,
+                    "type": message_dict["event_type"],
+                    "data": message_dict["event_data"],
+                }
+                self.hass.bus.async_fire("steam_vr_event", event_data)
 
+    async def register_event(self, call):
+        """Register SteamVR event.
+
+        Args:
+            call: The event to register.
+
+        Raises:
+            HomeAssistantError: If there is no websocket connection.
+
+        """
+        if self.websocket:
+            await self.websocket.send(
+                json.dumps({"type": "register_event", "command": call.data["event"]})
+            )
+        else:
+            raise HomeAssistantError("No websocket connection")
+
+    async def unregister_event(self, call):
+        """Unregister SteamVR event.
+
+        Args:
+            call: The event to unregister.
+
+        Raises:
+            HomeAssistantError: If there is no websocket connection.
+
+        """
+        if self.websocket:
+            await self.websocket.send(
+                json.dumps({"type": "unregister_event", "command": call.data["event"]})
+            )
+        else:
+            raise HomeAssistantError("No websocket connection")
+
+    def setup_services(self):
+        """Set up services."""
+        self.hass.services.async_register(
+            DOMAIN, "register_event", self.register_event
+        )
+        self.hass.services.async_register(
+            DOMAIN,
+            "unregister_event",
+            self.unregister_event
+        )
 
 
 def dataclass_from_dict(_class, d):
+    """Convert a dictionary to a dataclass object."""
     try:
         fieldtypes = {f.name: f.type for f in fields(_class)}
         return _class(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    except:
+    except Exception:
         return d  # Not a dataclass field
