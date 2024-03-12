@@ -20,7 +20,7 @@ try:
 except ImportError:
     from homeassistant.helpers.entity import DeviceInfo
 
-from homeassistant.helpers.entity import async_generate_entity_id
+from homeassistant.helpers.entity import Entity, async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -86,12 +86,12 @@ async def async_setup_entry(
         ]
     )
 
-    async def register_event(call: ServiceCall) -> None:
+    async def register_event(entity: Entity, call: ServiceCall) -> None:
         """Register an event."""
         event = call.data["event"]
         await coordinator.register_event(event)
 
-    async def unregister_event(call: ServiceCall) -> None:
+    async def unregister_event(entity: Entity, call: ServiceCall) -> None:
         """Unregister an event."""
         event = call.data["event"]
         await coordinator.unregister_event(event)
@@ -102,14 +102,14 @@ async def async_setup_entry(
         {
             vol.Required('event'): cv.string,
         },
-        "register_event",
+        register_event,
     )
     platform.async_register_entity_service(
         "unregister_event",
         {
             vol.Required('event'): cv.string,
         },
-        "unregister_event",
+        unregister_event,
     )
 
 
