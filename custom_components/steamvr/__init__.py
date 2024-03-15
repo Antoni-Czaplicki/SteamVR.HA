@@ -181,7 +181,7 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                     "type": message_dict["event_type"],
                     "data": message_dict["event_data"],
                 }
-                self.hass.bus.async_fire("steam_vr_event", event_data)
+                self.hass.bus.async_fire("steamvr_event", event_data)
 
     async def register_event(self, event):
         """Register SteamVR event.
