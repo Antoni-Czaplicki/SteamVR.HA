@@ -86,15 +86,15 @@ async def async_setup_entry(
         ]
     )
 
-    async def register_event(entity: Entity, call: ServiceCall) -> None:
+    async def custom_register_event(entity: VRStatusBinarySensor, call: ServiceCall) -> None:
         """Register an event."""
         event = call.data["event"]
-        await coordinator.register_event(event)
+        await entity.register_event(event)
 
-    async def unregister_event(entity: Entity, call: ServiceCall) -> None:
+    async def custom_unregister_event(entity: VRStatusBinarySensor, call: ServiceCall) -> None:
         """Unregister an event."""
         event = call.data["event"]
-        await coordinator.unregister_event(event)
+        await entity.unregister_event(event)
 
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
@@ -102,14 +102,14 @@ async def async_setup_entry(
         {
             vol.Required('event'): cv.string,
         },
-        register_event,
+        custom_register_event,
     )
     platform.async_register_entity_service(
         "unregister_event",
         {
             vol.Required('event'): cv.string,
         },
-        unregister_event,
+        custom_unregister_event,
     )
 
 
@@ -256,3 +256,12 @@ class VRStatusBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         super()._handle_coordinator_update()
+
+
+    async def register_event(self, event: str) -> None:
+        """Register an event."""
+        await self.coordinator.register_event(event)
+
+    async def unregister_event(self, event: str) -> None:
+        """Unregister an event."""
+        await self.coordinator.unregister_event(event)
