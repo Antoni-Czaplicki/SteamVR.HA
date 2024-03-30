@@ -52,7 +52,7 @@ class SteamVRNotificationService(BaseNotificationService):
             # into the notification data dictionary.
 
             for key, val in data.items():
-                if key in ["imageData", "imagePath", "customProperties"]:
+                if key in ["imageData", "imagePath", "imageUrl", "customProperties"]:
                     payload[key] = val
 
         try:
