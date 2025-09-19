@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import voluptuous as vol
-
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
@@ -11,7 +10,8 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 
 from . import SteamVRCoordinator
 
@@ -33,7 +33,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator: SteamVRCoordinator = hass.data[DOMAIN][f"{config_entry.entry_id}_coordinator"]
+    coordinator: SteamVRCoordinator = hass.data[DOMAIN][
+        f"{config_entry.entry_id}_coordinator"
+    ]
     async_add_entities(
         [
             VRControllerBinarySensor(
@@ -86,12 +88,16 @@ async def async_setup_entry(
         ]
     )
 
-    async def custom_register_event(entity: VRStatusBinarySensor, call: ServiceCall) -> None:
+    async def custom_register_event(
+        entity: VRStatusBinarySensor, call: ServiceCall
+    ) -> None:
         """Register an event."""
         event = call.data["event"]
         await entity.register_event(event)
 
-    async def custom_unregister_event(entity: VRStatusBinarySensor, call: ServiceCall) -> None:
+    async def custom_unregister_event(
+        entity: VRStatusBinarySensor, call: ServiceCall
+    ) -> None:
         """Unregister an event."""
         event = call.data["event"]
         await entity.unregister_event(event)
@@ -100,14 +106,14 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         "register_event",
         {
-            vol.Required('event'): cv.string,
+            vol.Required("event"): cv.string,
         },
         custom_register_event,
     )
     platform.async_register_entity_service(
         "unregister_event",
         {
-            vol.Required('event'): cv.string,
+            vol.Required("event"): cv.string,
         },
         custom_unregister_event,
     )
@@ -256,7 +262,6 @@ class VRStatusBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         super()._handle_coordinator_update()
-
 
     async def register_event(self, event: str) -> None:
         """Register an event."""

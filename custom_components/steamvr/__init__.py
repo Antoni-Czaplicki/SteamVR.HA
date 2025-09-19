@@ -1,25 +1,29 @@
 """The SteamVR integration."""
 
-from dataclasses import fields
 import json
 import logging
+from dataclasses import fields
 
 import websockets
-
+from homeassistant import config_validation as cv
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, discovery
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import discovery
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .device import VRDeviceActivityLevel, VRState
+from .utils import denormalize_vr_event_name, normalize_vr_event_name
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -176,9 +180,13 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                 if device_entry:
                     self.device_id = device_entry.id
             if self.device_id:
+                # Normalize the event type from WebSocket API format to Home Assistant format
+                normalized_event_type = normalize_vr_event_name(
+                    message_dict["event_type"]
+                )
                 event_data = {
                     "device_id": self.device_id,
-                    "type": message_dict["event_type"],
+                    "type": normalized_event_type,
                     "data": message_dict["event_data"],
                 }
                 self.hass.bus.async_fire("steamvr_event", event_data)
@@ -187,15 +195,17 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         """Register SteamVR event.
 
         Args:
-            event: The event to register.
+            event: The event to register (in Home Assistant format).
 
         Raises:
             HomeAssistantError: If there is no websocket connection.
 
         """
         if self.websocket:
+            # Convert from Home Assistant format to WebSocket API format
+            websocket_event = denormalize_vr_event_name(event)
             await self.websocket.send(
-                json.dumps({"type": "register_event", "command": event})
+                json.dumps({"type": "register_event", "command": websocket_event})
             )
         else:
             raise HomeAssistantError("No websocket connection")
@@ -204,15 +214,17 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         """Unregister SteamVR event.
 
         Args:
-            event: The event to unregister.
+            event: The event to unregister (in Home Assistant format).
 
         Raises:
             HomeAssistantError: If there is no websocket connection.
 
         """
         if self.websocket:
+            # Convert from Home Assistant format to WebSocket API format
+            websocket_event = denormalize_vr_event_name(event)
             await self.websocket.send(
-                json.dumps({"type": "unregister_event", "command": event})
+                json.dumps({"type": "unregister_event", "command": websocket_event})
             )
         else:
             raise HomeAssistantError("No websocket connection")
