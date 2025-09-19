@@ -8,7 +8,9 @@ Integration that lets you monitor and control your SteamVR setup (HTC Vive, Valv
     - Headset status (In use/Standby/Idle)
     - Controllers (is connected, battery level, is charging)
 - Notifications to headset
-- Vibrating controllers from Home Assistant
+- Displaying images (even animated) in headset - via notifications with `imageUrl` / `imagePath` / `imageData`(`base64`)
+- Listening for SteamVR events - button click, switching passthrough and more
+- Triggering controllers vibration from Home Assistant
 
 
 ## Getting started
