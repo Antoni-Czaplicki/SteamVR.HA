@@ -4,8 +4,8 @@ import json
 import logging
 from dataclasses import fields
 
+import homeassistant.helpers.config_validation as cv
 import websockets
-from homeassistant import config_validation as cv
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
