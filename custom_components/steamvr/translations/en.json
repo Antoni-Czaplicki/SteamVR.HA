@@ -39,6 +39,11 @@
           "idle_timeout": "Idle timeout"
         }
       }
+    },
+    "notify": {
+      "notify": {
+        "name": "Notify"
+      }
     }
   },
   "selector": {
@@ -247,6 +252,36 @@
           "name": "Event",
           "description": "The event to unregister, full list: https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.json#L385",
           "example": "vr-event-tracked-device-activated"
+        }
+      }
+    },
+    "send_notification": {
+      "name": "Send notification",
+      "description": "Send a notification to the headset, optionally with an image attachment.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "The notification message text."
+        },
+        "title": {
+          "name": "Title",
+          "description": "Title shown above the message. Defaults to 'Home Assistant'."
+        },
+        "image_url": {
+          "name": "Image URL",
+          "description": "Public URL of an image (or animated image) to display."
+        },
+        "image_path": {
+          "name": "Image path",
+          "description": "Path on the SteamVR Agent host to an image file to display."
+        },
+        "image_data": {
+          "name": "Image data",
+          "description": "Base64-encoded image data to display."
+        },
+        "custom_properties": {
+          "name": "Custom properties",
+          "description": "Additional fields forwarded verbatim to the SteamVR Agent."
         }
       }
     }

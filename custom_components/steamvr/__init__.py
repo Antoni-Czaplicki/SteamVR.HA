@@ -4,16 +4,13 @@ import json
 import logging
 from dataclasses import fields
 
-import homeassistant.helpers.config_validation as cv
 import websockets
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
+from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import discovery
-from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
@@ -21,18 +18,14 @@ from .device import VRDeviceActivityLevel, VRState
 from .utils import denormalize_vr_event_name, normalize_vr_event_name
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
-
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+PLATFORMS = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NOTIFY,
+]
 
 type SteamVRConfigEntry = ConfigEntry["SteamVRCoordinator"]
-
-
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the SteamVR component."""
-
-    hass.data["steamvr_hass_config"] = config
-    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> bool:
@@ -42,20 +35,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> b
     )
     entry.runtime_data = coordinator
     await coordinator.async_refresh()
-    hass.async_create_task(
-        discovery.async_load_platform(
-            hass,
-            Platform.NOTIFY,
-            DOMAIN,
-            {
-                CONF_HOST: entry.data[CONF_HOST],
-                CONF_PORT: entry.data[CONF_PORT],
-                CONF_NAME: entry.data[CONF_NAME],
-                "entry_id": entry.entry_id,
-            },
-            hass.data["steamvr_hass_config"],
-        )
-    )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
