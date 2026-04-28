@@ -1,4 +1,4 @@
-"""Provides device triggers for Uonet+ Vulcan."""
+"""Provides device triggers for SteamVR."""
 
 from __future__ import annotations
 

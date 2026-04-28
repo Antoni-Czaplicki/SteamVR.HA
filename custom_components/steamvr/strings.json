@@ -230,7 +230,7 @@
   "services": {
     "register_event": {
       "name": "Register VR Event",
-      "description": "Register a VR event to recive triggers when the event occurs",
+      "description": "Register a VR event to receive triggers when the event occurs",
       "fields": {
         "event": {
           "name": "Event",
@@ -241,7 +241,7 @@
     },
     "unregister_event": {
       "name": "Unregister VR Event",
-      "description": "Unregister a VR event to recive triggers when the event occurs",
+      "description": "Unregister a VR event to receive triggers when the event occurs",
       "fields": {
         "event": {
           "name": "Event",

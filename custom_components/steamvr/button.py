@@ -11,7 +11,7 @@ from homeassistant.components.button import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -93,9 +93,10 @@ class VRControllerIdentifyButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        if self.coordinator.websocket is None:
+            raise HomeAssistantError("SteamVR is not connected.")
         payload = {
             "type": "command",
             "command": f"vibrate_controller_{self.controller_side}",
         }
-
         await self.coordinator.websocket.send(json.dumps(payload))

@@ -57,7 +57,7 @@ Now you can clone the repository somewhere else and symlink it to Home Assistant
 
 1. Download [ZIP](https://github.com/Antoni-Czaplicki/SteamVR.HA/archive/master.zip) with the code.
 2. Unpack it.
-3. Copy the `custom_components/toyota/` from the unpacked archive to `custom_components`
+3. Copy the `custom_components/steamvr/` from the unpacked archive to `custom_components`
    in your Home Assistant configuration directory.
 
 </details>

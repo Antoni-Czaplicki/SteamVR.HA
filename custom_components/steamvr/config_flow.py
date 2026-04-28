@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import voluptuous as vol
@@ -16,8 +15,6 @@ from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
 
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SteamVRFlowHandler(ConfigFlow, domain=DOMAIN):

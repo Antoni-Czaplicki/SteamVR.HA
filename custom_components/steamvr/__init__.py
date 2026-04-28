@@ -127,8 +127,6 @@ class SteamVRCoordinator(DataUpdateCoordinator):
                     message_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
                 vr_state = dataclass_from_dict(VRState, message_dict)
                 self.async_set_updated_data(vr_state)
-            # elif "error" in vr_state_dict and vr_state_dict["error"]:
-            #     self.async_set_updated_data(VRState(False, error=vr_state_dict["error"]))
             return
         if message_dict["type"] == "state":
             if (
