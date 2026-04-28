@@ -234,7 +234,7 @@
       "fields": {
         "event": {
           "name": "Zdarzenie",
-          "description": "Zdarzenie VR które ma być zarejestrowane, lista dostępnych:  https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.json#L385",
+          "description": "Zdarzenie VR które ma być zarejestrowane. Pełna lista dostępna w dokumentacji integracji.",
           "example": "vr-event-tracked-device-activated"
         }
       }
@@ -245,7 +245,7 @@
       "fields": {
         "event": {
           "name": "Zdarzenie",
-          "description": "Zdarzenie VR które ma być wyrejestrowane, lista dostępnych:  https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.json#L385",
+          "description": "Zdarzenie VR które ma być wyrejestrowane. Pełna lista dostępna w dokumentacji integracji.",
           "example": "vr-event-tracked-device-activated"
         }
       }
