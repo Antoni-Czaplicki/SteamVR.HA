@@ -313,7 +313,7 @@ unregister_event:
             - "vr-event-environment-settings-have-changed"
             - "vr-event-power-settings-have-changed"
             - "vr-event-enable-home-app-settings-have-changed"
-            - "vr-event-steamvr-section-setting-changed"
+            - "vr-event-steam-vr-section-setting-changed"
             - "vr-event-lighthouse-section-setting-changed"
             - "vr-event-null-section-setting-changed"
             - "vr-event-user-interface-section-setting-changed"
