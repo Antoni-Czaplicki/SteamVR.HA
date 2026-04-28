@@ -11,10 +11,10 @@ import websockets
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
+from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, discovery
+from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -24,60 +24,46 @@ from .device import VRDeviceActivityLevel, VRState
 from .utils import denormalize_vr_event_name, normalize_vr_event_name
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
+PLATFORMS = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NOTIFY,
+]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+type SteamVRConfigEntry = ConfigEntry["SteamVRCoordinator"]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the SteamVR component."""
-
-    hass.data["steamvr_hass_config"] = config
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> bool:
     """Set up SteamVR from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = SteamVRCoordinator(
+    coordinator = SteamVRCoordinator(
         hass, entry, f"ws://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
     )
-    await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].async_refresh()
-    hass.async_create_task(
-        discovery.async_load_platform(
-            hass,
-            Platform.NOTIFY,
-            DOMAIN,
-            {
-                CONF_HOST: entry.data[CONF_HOST],
-                CONF_PORT: entry.data[CONF_PORT],
-                CONF_NAME: entry.data[CONF_NAME],
-                "entry_id": entry.entry_id,
-            },
-            hass.data["steamvr_hass_config"],
-        )
-    )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS[1:])
+    entry.runtime_data = coordinator
+    await coordinator.async_refresh()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS[1:]
-    ):
-        coordinator = hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator", None)
-        if coordinator:
-            await coordinator.async_shutdown()
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
     """SteamVR coordinator."""
 
+    config_entry: SteamVRConfigEntry
+
     def __init__(
-        self, hass: HomeAssistant, config_entry: ConfigEntry, url: str
+        self, hass: HomeAssistant, config_entry: SteamVRConfigEntry, url: str
     ) -> None:
         """Initialize coordinator."""
         super().__init__(

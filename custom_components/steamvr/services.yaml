@@ -386,3 +386,34 @@ unregister_event:
             - "vr-event-audio-set-microphone-mute"
             - "vr-event-vendor-specific-reserved-start"
             - "vr-event-vendor-specific-reserved-end"
+send_notification:
+  target:
+    entity:
+      integration: steamvr
+      domain: notify
+  fields:
+    message:
+      required: true
+      example: "Hello from Home Assistant"
+      selector:
+        text:
+    title:
+      example: "Home Assistant"
+      selector:
+        text:
+    image_url:
+      example: "https://example.com/image.png"
+      selector:
+        text:
+    image_path:
+      example: "C:/path/to/image.png"
+      selector:
+        text:
+    image_data:
+      example: "iVBORw0KGgoAAAANSUhEUgAA..."
+      selector:
+        text:
+          multiline: true
+    custom_properties:
+      selector:
+        object:

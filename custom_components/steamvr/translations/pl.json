@@ -28,6 +28,11 @@
     }
   },
   "entity": {
+    "notify": {
+      "notify": {
+        "name": "Powiadomienia"
+      }
+    },
     "sensor": {
       "vr_status": {
         "state": {
@@ -247,6 +252,36 @@
           "name": "Zdarzenie",
           "description": "Zdarzenie VR które ma być wyrejestrowane. Zobacz [pełną listę obsługiwanych zdarzeń]({openvr_events_url}).",
           "example": "vr-event-tracked-device-activated"
+        }
+      }
+    },
+    "send_notification": {
+      "name": "Wyślij powiadomienie",
+      "description": "Wysyła powiadomienie do gogli, opcjonalnie z załącznikiem obrazu.",
+      "fields": {
+        "message": {
+          "name": "Wiadomość",
+          "description": "Treść powiadomienia."
+        },
+        "title": {
+          "name": "Tytuł",
+          "description": "Tytuł wyświetlany nad treścią. Domyślnie 'Home Assistant'."
+        },
+        "image_url": {
+          "name": "URL obrazu",
+          "description": "Publiczny URL obrazu (lub animacji) do wyświetlenia."
+        },
+        "image_path": {
+          "name": "Ścieżka obrazu",
+          "description": "Ścieżka do pliku obrazu na hoście Agenta SteamVR."
+        },
+        "image_data": {
+          "name": "Dane obrazu",
+          "description": "Dane obrazu zakodowane w Base64."
+        },
+        "custom_properties": {
+          "name": "Dodatkowe właściwości",
+          "description": "Dodatkowe pola przekazywane bez zmian do Agenta SteamVR."
         }
       }
     }
