@@ -25,6 +25,8 @@ PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
+type SteamVRConfigEntry = ConfigEntry["SteamVRCoordinator"]
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the SteamVR component."""
@@ -33,13 +35,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> bool:
     """Set up SteamVR from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
     coordinator = SteamVRCoordinator(
         hass, entry, f"ws://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
     )
-    hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = coordinator
+    entry.runtime_data = coordinator
     await coordinator.async_refresh()
     hass.async_create_task(
         discovery.async_load_platform(
@@ -59,20 +60,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: SteamVRConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        coordinator = hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator", None)
-        if coordinator is not None and coordinator.websocket:
+        coordinator = entry.runtime_data
+        if coordinator.websocket:
             await coordinator.websocket.close()
 
     return unload_ok
 
 
-class SteamVRCoordinator(DataUpdateCoordinator):
+class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
     """SteamVR coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, url) -> None:
+    config_entry: SteamVRConfigEntry
+
+    def __init__(
+        self, hass: HomeAssistant, config_entry: SteamVRConfigEntry, url: str
+    ) -> None:
         """Initialize coordinator."""
         super().__init__(
             hass,
@@ -83,7 +88,7 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         self.url = url
         self.websocket = None
         self.entry_id = config_entry.entry_id
-        self.device_id = None
+        self.device_id: str | None = None
 
     async def _async_update_data(self):
         self.config_entry.async_create_background_task(

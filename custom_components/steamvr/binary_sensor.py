@@ -12,26 +12,22 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
-
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SteamVRCoordinator
-
+from . import SteamVRConfigEntry, SteamVRCoordinator
 from .const import DOMAIN
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: SteamVRConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator: SteamVRCoordinator = hass.data[DOMAIN][
-        f"{config_entry.entry_id}_coordinator"
-    ]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [
             VRControllerBinarySensor(

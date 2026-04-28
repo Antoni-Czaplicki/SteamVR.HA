@@ -15,8 +15,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import DOMAIN
-
 
 def get_service(
     hass: HomeAssistant,
@@ -27,9 +25,10 @@ def get_service(
     if discovery_info is None:
         raise ValueError("Discovery info is missing.")
 
-    return SteamVRNotificationService(
-        hass.data[DOMAIN][f"{discovery_info['entry_id']}_coordinator"]
-    )
+    entry = hass.config_entries.async_get_entry(discovery_info["entry_id"])
+    if entry is None:
+        raise ValueError("Config entry not found.")
+    return SteamVRNotificationService(entry.runtime_data)
 
 
 class SteamVRNotificationService(BaseNotificationService):
