@@ -21,7 +21,7 @@ from .device import VRDeviceActivityLevel, VRState
 from .utils import denormalize_vr_event_name, normalize_vr_event_name
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.NOTIFY, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -36,10 +36,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SteamVR from a config entry."""
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = SteamVRCoordinator(
+    coordinator = SteamVRCoordinator(
         hass, entry, f"ws://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
     )
-    await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].async_refresh()
+    hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = coordinator
+    await coordinator.async_refresh()
     hass.async_create_task(
         discovery.async_load_platform(
             hass,
@@ -54,21 +55,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data["steamvr_hass_config"],
         )
     )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS[1:])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS[1:]
-    ):
-        if (
-            f"{entry.entry_id}_coordinator" in hass.data[DOMAIN]
-            and hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket
-        ):
-            await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket.close()
-            hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator")
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        coordinator = hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator", None)
+        if coordinator is not None and coordinator.websocket:
+            await coordinator.websocket.close()
 
     return unload_ok
 
@@ -81,12 +77,10 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            # Name of the data. For logging purposes.
+            config_entry=config_entry,
             name="SteamVR data",
         )
-        self.hass = hass
         self.url = url
-        self.config_entry = config_entry
         self.websocket = None
         self.entry_id = config_entry.entry_id
         self.device_id = None

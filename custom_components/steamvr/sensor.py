@@ -11,16 +11,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
 
-from . import SteamVRCoordinator
-
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
-
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import SteamVRCoordinator
 
 from .const import DOMAIN
 from .device import VRDeviceActivityLevel

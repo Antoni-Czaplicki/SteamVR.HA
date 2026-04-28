@@ -13,16 +13,12 @@ from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
 
-from . import SteamVRCoordinator
-
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
-
-from homeassistant.helpers.entity import Entity, async_generate_entity_id
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import SteamVRCoordinator
 
 from .const import DOMAIN
 

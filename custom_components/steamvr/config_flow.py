@@ -6,30 +6,34 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-from homeassistant import config_entries
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class SteamVRFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SteamVR."""
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(config_entry: ConfigEntry) -> SteamVROptionsFlowHandler:
         """Get the options flow for this handler."""
-        return SteamVROptionsFlowHandler(config_entry)
+        return SteamVROptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             self._async_abort_entries_match(
@@ -55,16 +59,12 @@ class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
+class SteamVROptionsFlowHandler(OptionsFlow):
     """Options flow handler for SteamVR integration."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
