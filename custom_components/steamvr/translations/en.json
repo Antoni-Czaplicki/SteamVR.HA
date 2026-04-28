@@ -239,7 +239,7 @@
       "fields": {
         "event": {
           "name": "Event",
-          "description": "The event to register, full list: https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.json#L385",
+          "description": "The event to register. See the integration documentation for the full list of supported events.",
           "example": "vr-event-tracked-device-activated"
         }
       }
@@ -250,7 +250,7 @@
       "fields": {
         "event": {
           "name": "Event",
-          "description": "The event to unregister, full list: https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_api.json#L385",
+          "description": "The event to unregister. See the integration documentation for the full list of supported events.",
           "example": "vr-event-tracked-device-activated"
         }
       }
