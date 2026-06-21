@@ -1,7 +1,9 @@
 """The SteamVR integration."""
 
+import asyncio
 import json
 import logging
+from contextlib import suppress
 from dataclasses import fields
 
 import homeassistant.helpers.config_validation as cv
@@ -63,12 +65,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS[1:]
     ):
-        if (
-            f"{entry.entry_id}_coordinator" in hass.data[DOMAIN]
-            and hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket
-        ):
-            await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket.close()
-            hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator")
+        coordinator = hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator", None)
+        if coordinator:
+            await coordinator.async_shutdown()
 
     return unload_ok
 
@@ -88,27 +87,67 @@ class SteamVRCoordinator(DataUpdateCoordinator):
         self.url = url
         self.config_entry = config_entry
         self.websocket = None
+        self._websocket_task = None
+        self._stopping = False
         self.entry_id = config_entry.entry_id
         self.device_id = None
 
     async def _async_update_data(self):
-        self.config_entry.async_create_background_task(
-            self.hass, self.run_server(), "steam_vr_ws"
-        )
+        if self._websocket_task is None or self._websocket_task.done():
+            self._stopping = False
+            self._websocket_task = self.config_entry.async_create_background_task(
+                self.hass, self.run_server(), "steam_vr_ws"
+            )
         return VRState(is_openvr_connected=False)
 
     async def run_server(self):
         """Connect to the websocket server."""
-        async for websocket in websockets.connect(self.url):
-            try:
-                self.websocket = websocket
-                async for message in websocket:
-                    await self.on_message(message)
-            except websockets.ConnectionClosed:
-                self.async_set_updated_data(VRState(is_openvr_connected=False))
-                continue
-            finally:
-                self.async_set_updated_data(VRState(is_openvr_connected=False))
+        try:
+            async for websocket in websockets.connect(self.url):
+                if self._stopping:
+                    break
+
+                should_stop = False
+
+                try:
+                    self.websocket = websocket
+                    async for message in websocket:
+                        if self._stopping:
+                            should_stop = True
+                            break
+                        await self.on_message(message)
+                except websockets.ConnectionClosed:
+                    if self._stopping:
+                        should_stop = True
+                    else:
+                        self.async_set_updated_data(VRState(is_openvr_connected=False))
+                        continue
+                finally:
+                    if self.websocket is websocket:
+                        self.websocket = None
+
+                    self.async_set_updated_data(VRState(is_openvr_connected=False))
+
+                if should_stop or self._stopping:
+                    break
+        except asyncio.CancelledError:
+            raise
+
+    async def async_shutdown(self):
+        """Stop the websocket connection and background task."""
+        self._stopping = True
+
+        if self.websocket is not None:
+            await self.websocket.close()
+
+        if self._websocket_task is not None and not self._websocket_task.done():
+            self._websocket_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._websocket_task
+
+        self._websocket_task = None
+        self.websocket = None
+        self.async_set_updated_data(VRState(is_openvr_connected=False))
 
     async def on_message(self, message: str | bytes):
         """Handle incoming messages from the websocket server.
