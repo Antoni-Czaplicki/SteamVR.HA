@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import voluptuous as vol
+
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -21,24 +19,34 @@ class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(
+            config_entry: config_entries.ConfigEntry,
+    ) -> SteamVROptionsFlowHandler:
         """Get the options flow for this handler."""
         return SteamVROptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle a flow initiated by the user."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
+            host = user_input[CONF_HOST]
+            port = user_input[CONF_PORT]
+            name = user_input.get(CONF_NAME) or host
+
+            user_input[CONF_NAME] = name
+
             self._async_abort_entries_match(
-                {CONF_HOST: user_input[CONF_HOST], CONF_NAME: user_input[CONF_NAME]}
+                {
+                    CONF_HOST: host,
+                    CONF_PORT: port,
+                }
             )
-            if not user_input[CONF_NAME]:
-                user_input[CONF_NAME] = user_input[CONF_HOST]
+
             return self.async_create_entry(
-                title=user_input[CONF_NAME],
+                title=name,
                 data=user_input,
             )
 
@@ -60,7 +68,7 @@ class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -77,7 +85,9 @@ class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
                     ): bool,
                     vol.Required(
                         "port_auto_update",
-                        default=self.config_entry.options.get("port_auto_update", True),
+                        default=self.config_entry.options.get(
+                            "port_auto_update", True
+                        ),
                     ): bool,
                 }
             ),
