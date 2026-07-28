@@ -1,20 +1,21 @@
 """The SteamVR integration."""
 
 import asyncio
-import json
-import logging
 from contextlib import suppress
 from dataclasses import fields
+import json
+import logging
+from typing import override
 
-import homeassistant.helpers.config_validation as cv
 import websockets
+
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import discovery
+from homeassistant.helpers import device_registry as dr, discovery
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -72,27 +73,30 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-class SteamVRCoordinator(DataUpdateCoordinator):
+class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
     """SteamVR coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, url) -> None:
+    def __init__(
+        self, hass: HomeAssistant, config_entry: ConfigEntry, url: str
+    ) -> None:
         """Initialize coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            # Name of the data. For logging purposes.
+            config_entry=config_entry,
             name="SteamVR data",
         )
         self.hass = hass
         self.url = url
         self.config_entry = config_entry
-        self.websocket = None
-        self._websocket_task = None
+        self.websocket: websockets.ClientConnection | None = None
+        self._websocket_task: asyncio.Task[None] | None = None
         self._stopping = False
         self.entry_id = config_entry.entry_id
-        self.device_id = None
+        self.device_id: str | None = None
 
-    async def _async_update_data(self):
+    @override
+    async def _async_update_data(self) -> VRState:
         if self._websocket_task is None or self._websocket_task.done():
             self._stopping = False
             self._websocket_task = self.config_entry.async_create_background_task(
@@ -100,42 +104,35 @@ class SteamVRCoordinator(DataUpdateCoordinator):
             )
         return VRState(is_openvr_connected=False)
 
-    async def run_server(self):
+    async def run_server(self) -> None:
         """Connect to the websocket server."""
-        try:
-            async for websocket in websockets.connect(self.url):
-                if self._stopping:
-                    break
+        async for websocket in websockets.connect(self.url):
+            if self._stopping:
+                await websocket.close()
+                break
 
-                should_stop = False
+            try:
+                self.websocket = websocket
+                async for message in websocket:
+                    await self.on_message(message)
+            except websockets.ConnectionClosed:
+                pass
+            finally:
+                if self.websocket is websocket:
+                    self.websocket = None
+                self.async_set_updated_data(VRState(is_openvr_connected=False))
 
-                try:
-                    self.websocket = websocket
-                    async for message in websocket:
-                        if self._stopping:
-                            should_stop = True
-                            break
-                        await self.on_message(message)
-                except websockets.ConnectionClosed:
-                    if self._stopping:
-                        should_stop = True
-                    else:
-                        self.async_set_updated_data(VRState(is_openvr_connected=False))
-                        continue
-                finally:
-                    if self.websocket is websocket:
-                        self.websocket = None
+            if self._stopping:
+                break
 
-                    self.async_set_updated_data(VRState(is_openvr_connected=False))
-
-                if should_stop or self._stopping:
-                    break
-        except asyncio.CancelledError:
-            raise
-
-    async def async_shutdown(self):
+    @override
+    async def async_shutdown(self) -> None:
         """Stop the websocket connection and background task."""
+        if self._stopping:
+            return
+
         self._stopping = True
+        await super().async_shutdown()
 
         if self.websocket is not None:
             await self.websocket.close()
