@@ -20,7 +20,7 @@ class SteamVRFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-            config_entry: config_entries.ConfigEntry,
+        config_entry: config_entries.ConfigEntry,
     ) -> SteamVROptionsFlowHandler:
         """Get the options flow for this handler."""
         return SteamVROptionsFlowHandler()
@@ -85,9 +85,7 @@ class SteamVROptionsFlowHandler(config_entries.OptionsFlow):
                     ): bool,
                     vol.Required(
                         "port_auto_update",
-                        default=self.config_entry.options.get(
-                            "port_auto_update", True
-                        ),
+                        default=self.config_entry.options.get("port_auto_update", True),
                     ): bool,
                 }
             ),
