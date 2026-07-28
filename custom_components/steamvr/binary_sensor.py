@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import voluptuous as vol
+
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
@@ -10,8 +11,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_platform
+from homeassistant.helpers import config_validation as cv, entity_platform
 
 from . import SteamVRCoordinator
 
@@ -20,11 +20,11 @@ try:
 except ImportError:
     from homeassistant.helpers.entity import DeviceInfo
 
-from homeassistant.helpers.entity import Entity, async_generate_entity_id
+from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, OPENVR_EVENTS_URL
 
 
 async def async_setup_entry(
@@ -109,6 +109,7 @@ async def async_setup_entry(
             vol.Required("event"): cv.string,
         },
         custom_register_event,
+        description_placeholders={"openvr_events_url": OPENVR_EVENTS_URL},
     )
     platform.async_register_entity_service(
         "unregister_event",
@@ -116,6 +117,7 @@ async def async_setup_entry(
             vol.Required("event"): cv.string,
         },
         custom_unregister_event,
+        description_placeholders={"openvr_events_url": OPENVR_EVENTS_URL},
     )
 
 
