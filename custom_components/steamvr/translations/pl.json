@@ -234,7 +234,7 @@
       "fields": {
         "event": {
           "name": "Zdarzenie",
-          "description": "Zdarzenie VR które ma być zarejestrowane. Pełna lista dostępna w dokumentacji integracji.",
+          "description": "Zdarzenie VR które ma być zarejestrowane. Zobacz [pełną listę obsługiwanych zdarzeń]({openvr_events_url}).",
           "example": "vr-event-tracked-device-activated"
         }
       }
@@ -245,7 +245,7 @@
       "fields": {
         "event": {
           "name": "Zdarzenie",
-          "description": "Zdarzenie VR które ma być wyrejestrowane. Pełna lista dostępna w dokumentacji integracji.",
+          "description": "Zdarzenie VR które ma być wyrejestrowane. Zobacz [pełną listę obsługiwanych zdarzeń]({openvr_events_url}).",
           "example": "vr-event-tracked-device-activated"
         }
       }

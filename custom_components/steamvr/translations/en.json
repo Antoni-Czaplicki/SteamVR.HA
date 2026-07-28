@@ -234,7 +234,7 @@
       "fields": {
         "event": {
           "name": "Event",
-          "description": "The event to register. See the integration documentation for the full list of supported events.",
+          "description": "The event to register. See the [full list of supported events]({openvr_events_url}).",
           "example": "vr-event-tracked-device-activated"
         }
       }
@@ -245,7 +245,7 @@
       "fields": {
         "event": {
           "name": "Event",
-          "description": "The event to unregister. See the integration documentation for the full list of supported events.",
+          "description": "The event to unregister. See the [full list of supported events]({openvr_events_url}).",
           "example": "vr-event-tracked-device-activated"
         }
       }
