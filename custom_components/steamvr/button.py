@@ -1,7 +1,5 @@
 """Support for SteamVR buttons."""
 
-from __future__ import annotations
-
 import json
 
 from homeassistant.components.button import (
@@ -9,29 +7,23 @@ from homeassistant.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-
-from . import SteamVRCoordinator
-
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
-
-from homeassistant.helpers.entity import async_generate_entity_id
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory, async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import SteamVRConfigEntry, SteamVRCoordinator
 from .const import DOMAIN
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: SteamVRConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator = hass.data[DOMAIN][f"{config_entry.entry_id}_coordinator"]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [
             VRControllerIdentifyButton(
@@ -63,7 +55,7 @@ class VRControllerIdentifyButton(ButtonEntity):
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: SteamVRConfigEntry,
         coordinator: SteamVRCoordinator,
         controller_side: str,
         entity_id: str,
@@ -74,6 +66,7 @@ class VRControllerIdentifyButton(ButtonEntity):
         self._attr_name = f"{controller_side.capitalize()} Controller Identify"
         self.entity_id = entity_id
         self._attr_device_class = ButtonDeviceClass.IDENTIFY
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_icon = "mdi:vibrate"
         self._attr_unique_id = (
             f"{config_entry.entry_id}_{controller_side}_ControllerIdentify"
@@ -97,6 +90,8 @@ class VRControllerIdentifyButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        if self.coordinator.websocket is None:
+            raise HomeAssistantError("SteamVR is not connected.")
         payload = {
             "type": "command",
             "command": f"vibrate_controller_{self.controller_side}",

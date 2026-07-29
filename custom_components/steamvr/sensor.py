@@ -1,38 +1,29 @@
 """Support for SteamVR sensors."""
 
-from __future__ import annotations
-
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
     SensorDeviceClass,
     SensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import UnitOfRatio
 from homeassistant.core import HomeAssistant, callback
-
-from . import SteamVRCoordinator
-
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
-
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import SteamVRConfigEntry, SteamVRCoordinator
 from .const import DOMAIN
 from .device import VRDeviceActivityLevel
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: SteamVRConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator = hass.data[DOMAIN][f"{config_entry.entry_id}_coordinator"]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [
             HMDSensor(
@@ -75,11 +66,14 @@ async def async_setup_entry(
     )
 
 
-class HMDSensor(CoordinatorEntity, SensorEntity):
+class HMDSensor(CoordinatorEntity[SteamVRCoordinator], SensorEntity):
     """Representation of a Sensor."""
 
     def __init__(
-        self, config_entry: ConfigEntry, coordinator: SteamVRCoordinator, entity_id: str
+        self,
+        config_entry: SteamVRConfigEntry,
+        coordinator: SteamVRCoordinator,
+        entity_id: str,
     ) -> None:
         """Initialize the sensor."""
         self.coordinator = coordinator
@@ -116,12 +110,12 @@ class HMDSensor(CoordinatorEntity, SensorEntity):
         super()._handle_coordinator_update()
 
 
-class VRControllerBatterySensor(CoordinatorEntity, SensorEntity):
+class VRControllerBatterySensor(CoordinatorEntity[SteamVRCoordinator], SensorEntity):
     """Representation of a VR Controller Battery Sensor."""
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: SteamVRConfigEntry,
         coordinator: SteamVRCoordinator,
         controller_side: str,
         entity_id: str,
@@ -135,7 +129,7 @@ class VRControllerBatterySensor(CoordinatorEntity, SensorEntity):
             f"{config_entry.entry_id}_{controller_side}_ControllerBattery"
         )
         self._attr_device_class = SensorDeviceClass.BATTERY
-        self._attr_native_unit_of_measurement = PERCENTAGE
+        self._attr_native_unit_of_measurement = UnitOfRatio.PERCENTAGE
         self.device_name = (
             f"{controller_side.capitalize()} Controller ({config_entry.title})"
         )
@@ -168,11 +162,14 @@ class VRControllerBatterySensor(CoordinatorEntity, SensorEntity):
         super()._handle_coordinator_update()
 
 
-class VRGameSensor(CoordinatorEntity, SensorEntity):
+class VRGameSensor(CoordinatorEntity[SteamVRCoordinator], SensorEntity):
     """Representation of a VR Game Sensor."""
 
     def __init__(
-        self, config_entry: ConfigEntry, coordinator: SteamVRCoordinator, entity_id: str
+        self,
+        config_entry: SteamVRConfigEntry,
+        coordinator: SteamVRCoordinator,
+        entity_id: str,
     ) -> None:
         """Initialize the VR Game Sensor."""
         self.coordinator = coordinator

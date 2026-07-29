@@ -1,16 +1,13 @@
 """Notify entity for SteamVR."""
 
-from __future__ import annotations
-
 import json
 from typing import Any
 
-import voluptuous as vol
+import websockets
 
 from homeassistant.components.notify import NotifyEntity, NotifyEntityFeature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -18,15 +15,6 @@ from . import SteamVRConfigEntry, SteamVRCoordinator
 from .const import DOMAIN
 
 DEFAULT_TITLE = "Home Assistant"
-
-SEND_NOTIFICATION_SCHEMA = {
-    vol.Required("message"): cv.string,
-    vol.Optional("title"): cv.string,
-    vol.Optional("image_url"): cv.string,
-    vol.Optional("image_path"): cv.string,
-    vol.Optional("image_data"): cv.string,
-    vol.Optional("custom_properties"): dict,
-}
 
 
 async def async_setup_entry(
@@ -36,13 +24,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up the SteamVR notify entity."""
     async_add_entities([SteamVRNotifyEntity(config_entry, config_entry.runtime_data)])
-
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        "send_notification",
-        SEND_NOTIFICATION_SCHEMA,
-        "async_send_rich_notification",
-    )
 
 
 class SteamVRNotifyEntity(NotifyEntity):
@@ -76,12 +57,10 @@ class SteamVRNotifyEntity(NotifyEntity):
             raise HomeAssistantError("SteamVR is not connected.")
         try:
             await self.coordinator.websocket.send(json.dumps(payload))
-        except (AttributeError, ConnectionError) as err:
+        except websockets.ConnectionClosed as err:
             raise HomeAssistantError("SteamVR is not connected.") from err
 
-    async def async_send_message(
-        self, message: str, title: str | None = None
-    ) -> None:
+    async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Send a basic notification to the headset."""
         await self._send_payload(
             {
@@ -113,3 +92,4 @@ class SteamVRNotifyEntity(NotifyEntity):
         if custom_properties is not None:
             payload["customProperties"] = custom_properties
         await self._send_payload(payload)
+        self._async_record_notification()

@@ -29,6 +29,7 @@ class VRState:
     """Dataclass representing the state of the VR system."""
 
     type: str = "state"
+    is_steamvr_process_running: bool = False
     is_openvr_connected: bool = False
     hmd_activity_level: VRDeviceActivityLevel = VRDeviceActivityLevel.unknown
     current_application_key: str | None = None

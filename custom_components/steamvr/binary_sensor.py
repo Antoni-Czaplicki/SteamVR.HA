@@ -1,41 +1,27 @@
 """Support for SteamVR binary sensors."""
 
-from __future__ import annotations
-
-import voluptuous as vol
-
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall, callback
-from homeassistant.helpers import config_validation as cv, entity_platform
-
-from . import SteamVRCoordinator
-
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
-
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, OPENVR_EVENTS_URL
+from . import SteamVRConfigEntry, SteamVRCoordinator
+from .const import DOMAIN, SteamVRBinarySensorFeature
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: SteamVRConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up entry."""
-    coordinator: SteamVRCoordinator = hass.data[DOMAIN][
-        f"{config_entry.entry_id}_coordinator"
-    ]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [
             VRControllerBinarySensor(
@@ -85,48 +71,27 @@ async def async_setup_entry(
                     hass=hass,
                 ),
             ),
+            SteamVRProcessBinarySensor(
+                config_entry,
+                coordinator,
+                async_generate_entity_id(
+                    ENTITY_ID_FORMAT,
+                    f"{config_entry.title}_steamvr_process",
+                    hass=hass,
+                ),
+            ),
         ]
     )
 
-    async def custom_register_event(
-        entity: VRStatusBinarySensor, call: ServiceCall
-    ) -> None:
-        """Register an event."""
-        event = call.data["event"]
-        await entity.register_event(event)
 
-    async def custom_unregister_event(
-        entity: VRStatusBinarySensor, call: ServiceCall
-    ) -> None:
-        """Unregister an event."""
-        event = call.data["event"]
-        await entity.unregister_event(event)
-
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        "register_event",
-        {
-            vol.Required("event"): cv.string,
-        },
-        custom_register_event,
-        description_placeholders={"openvr_events_url": OPENVR_EVENTS_URL},
-    )
-    platform.async_register_entity_service(
-        "unregister_event",
-        {
-            vol.Required("event"): cv.string,
-        },
-        custom_unregister_event,
-        description_placeholders={"openvr_events_url": OPENVR_EVENTS_URL},
-    )
-
-
-class VRControllerBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class VRControllerBinarySensor(
+    CoordinatorEntity[SteamVRCoordinator], BinarySensorEntity
+):
     """Representation of a VR Controller Binary Sensor."""
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: SteamVRConfigEntry,
         coordinator: SteamVRCoordinator,
         controller_side: str,
         entity_id: str,
@@ -174,12 +139,14 @@ class VRControllerBinarySensor(CoordinatorEntity, BinarySensorEntity):
         super()._handle_coordinator_update()
 
 
-class VRControllerChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class VRControllerChargingBinarySensor(
+    CoordinatorEntity[SteamVRCoordinator], BinarySensorEntity
+):
     """Representation of a VR Controller Charging Binary Sensor."""
 
     def __init__(
         self,
-        config_entry: ConfigEntry,
+        config_entry: SteamVRConfigEntry,
         coordinator: SteamVRCoordinator,
         controller_side: str,
         entity_id: str,
@@ -211,7 +178,7 @@ class VRControllerChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
         )
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return True if the controller is charging."""
         controller_data = (
             self.coordinator.data.right_controller
@@ -226,11 +193,16 @@ class VRControllerChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
         super()._handle_coordinator_update()
 
 
-class VRStatusBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class VRStatusBinarySensor(CoordinatorEntity[SteamVRCoordinator], BinarySensorEntity):
     """Representation of a VR Status Binary Sensor."""
 
+    _attr_supported_features = SteamVRBinarySensorFeature.EVENTS
+
     def __init__(
-        self, config_entry: ConfigEntry, coordinator: SteamVRCoordinator, entity_id: str
+        self,
+        config_entry: SteamVRConfigEntry,
+        coordinator: SteamVRCoordinator,
+        entity_id: str,
     ) -> None:
         """Initialize the VR Status Binary Sensor."""
         self.coordinator = coordinator
@@ -265,10 +237,46 @@ class VRStatusBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Handle updated data from the coordinator."""
         super()._handle_coordinator_update()
 
-    async def register_event(self, event: str) -> None:
+    async def async_register_event(self, event: str) -> None:
         """Register an event."""
         await self.coordinator.register_event(event)
 
-    async def unregister_event(self, event: str) -> None:
+    async def async_unregister_event(self, event: str) -> None:
         """Unregister an event."""
         await self.coordinator.unregister_event(event)
+
+
+class SteamVRProcessBinarySensor(
+    CoordinatorEntity[SteamVRCoordinator], BinarySensorEntity
+):
+    """Representation of the SteamVR process state."""
+
+    def __init__(
+        self,
+        config_entry: SteamVRConfigEntry,
+        coordinator: SteamVRCoordinator,
+        entity_id: str,
+    ) -> None:
+        """Initialize the SteamVR process binary sensor."""
+        self.coordinator = coordinator
+        self._attr_name = "SteamVR process"
+        self.entity_id = entity_id
+        self._attr_device_class = BinarySensorDeviceClass.RUNNING
+        self._attr_unique_id = f"{config_entry.entry_id}_SteamVRProcessBinarySensor"
+        self.device_name = f"VR Status ({config_entry.title})"
+        self.config_entry_id = config_entry.entry_id
+
+        super().__init__(coordinator)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.config_entry_id}_vr_status")},
+            name=self.device_name,
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether the SteamVR process is running."""
+        return self.coordinator.data.is_steamvr_process_running
