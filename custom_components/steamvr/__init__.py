@@ -1,8 +1,11 @@
 """The SteamVR integration."""
 
+import asyncio
+from contextlib import suppress
 from dataclasses import fields
 import json
 import logging
+from typing import override
 
 import websockets
 
@@ -63,52 +66,85 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS[1:]
     ):
-        if (
-            f"{entry.entry_id}_coordinator" in hass.data[DOMAIN]
-            and hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket
-        ):
-            await hass.data[DOMAIN][f"{entry.entry_id}_coordinator"].websocket.close()
-            hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator")
+        coordinator = hass.data[DOMAIN].pop(f"{entry.entry_id}_coordinator", None)
+        if coordinator:
+            await coordinator.async_shutdown()
 
     return unload_ok
 
 
-class SteamVRCoordinator(DataUpdateCoordinator):
+class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
     """SteamVR coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, url) -> None:
+    def __init__(
+        self, hass: HomeAssistant, config_entry: ConfigEntry, url: str
+    ) -> None:
         """Initialize coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            # Name of the data. For logging purposes.
+            config_entry=config_entry,
             name="SteamVR data",
         )
         self.hass = hass
         self.url = url
         self.config_entry = config_entry
-        self.websocket = None
+        self.websocket: websockets.ClientConnection | None = None
+        self._websocket_task: asyncio.Task[None] | None = None
+        self._stopping = False
         self.entry_id = config_entry.entry_id
-        self.device_id = None
+        self.device_id: str | None = None
 
-    async def _async_update_data(self):
-        self.config_entry.async_create_background_task(
-            self.hass, self.run_server(), "steam_vr_ws"
-        )
+    @override
+    async def _async_update_data(self) -> VRState:
+        if self._websocket_task is None or self._websocket_task.done():
+            self._stopping = False
+            self._websocket_task = self.config_entry.async_create_background_task(
+                self.hass, self.run_server(), "steam_vr_ws"
+            )
         return VRState(is_openvr_connected=False)
 
-    async def run_server(self):
+    async def run_server(self) -> None:
         """Connect to the websocket server."""
         async for websocket in websockets.connect(self.url):
+            if self._stopping:
+                await websocket.close()
+                break
+
             try:
                 self.websocket = websocket
                 async for message in websocket:
                     await self.on_message(message)
             except websockets.ConnectionClosed:
-                self.async_set_updated_data(VRState(is_openvr_connected=False))
-                continue
+                pass
             finally:
+                if self.websocket is websocket:
+                    self.websocket = None
                 self.async_set_updated_data(VRState(is_openvr_connected=False))
+
+            if self._stopping:
+                break
+
+    @override
+    async def async_shutdown(self) -> None:
+        """Stop the websocket connection and background task."""
+        if self._stopping:
+            return
+
+        self._stopping = True
+        await super().async_shutdown()
+
+        if self.websocket is not None:
+            await self.websocket.close()
+
+        if self._websocket_task is not None and not self._websocket_task.done():
+            self._websocket_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._websocket_task
+
+        self._websocket_task = None
+        self.websocket = None
+        self.async_set_updated_data(VRState(is_openvr_connected=False))
 
     async def on_message(self, message: str | bytes):
         """Handle incoming messages from the websocket server.
