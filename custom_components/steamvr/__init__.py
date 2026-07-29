@@ -156,10 +156,7 @@ class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
         message_dict = json.loads(message)
         if "type" not in message_dict:
             # Support for legacy client, will be removed in the future
-            if (
-                "is_openvr_connected" in message_dict
-                and message_dict["is_openvr_connected"]
-            ):
+            if message_dict.get("is_openvr_connected"):
                 if self.config_entry.options.get(
                     "replace_standby_with_idle", False
                 ) and (
@@ -173,20 +170,15 @@ class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
             #     self.async_set_updated_data(VRState(False, error=vr_state_dict["error"]))
             return
         if message_dict["type"] == "state":
-            if (
-                "is_openvr_connected" in message_dict
-                and message_dict["is_openvr_connected"]
+            if self.config_entry.options.get("replace_standby_with_idle", False) and (
+                message_dict.get("hmd_activity_level")
+                == VRDeviceActivityLevel.standby.value
             ):
-                if self.config_entry.options.get(
-                    "replace_standby_with_idle", False
-                ) and (
-                    message_dict["hmd_activity_level"]
-                    == VRDeviceActivityLevel.standby.value
-                ):
-                    message_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
-                vr_state = dataclass_from_dict(VRState, message_dict)
-                self.async_set_updated_data(vr_state)
-                return
+                message_dict["hmd_activity_level"] = VRDeviceActivityLevel.idle
+
+            vr_state = dataclass_from_dict(VRState, message_dict)
+            self.async_set_updated_data(vr_state)
+            return
         if message_dict["type"] == "event":
             if message_dict[
                 "event_type"
@@ -266,10 +258,16 @@ class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
             raise HomeAssistantError("No websocket connection")
 
 
-def dataclass_from_dict(_class, d):
+def dataclass_from_dict(_class, data):
     """Convert a dictionary to a dataclass object."""
     try:
         fieldtypes = {f.name: f.type for f in fields(_class)}
-        return _class(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    except Exception:
-        return d  # Not a dataclass field
+    except TypeError:
+        return data
+    return _class(
+        **{
+            key: dataclass_from_dict(fieldtypes[key], value)
+            for key, value in data.items()
+            if key in fieldtypes
+        }
+    )
