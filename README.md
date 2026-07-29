@@ -43,21 +43,21 @@ Now you can clone the repository somewhere else and symlink it to Home Assistant
 1. Clone the repo.
 
    ```shell
-   git clone https://github.com/Antoni-Czaplicki/SteamVR.HA.git
+   git clone https://github.com/Antoni-Czaplicki/SteamVR.HA.git ~/SteamVR.HA
    ```
 
 2. Create the symlink to `steamvr` in the configuration directory.
    If you have non-standard directory for configuration, use it instead.
 
    ```shell
-   ln -s SteamVR.HA/custom_components/steamvr ~/.homeassistant/custom_components/steamvr
+   ln -s ~/SteamVR.HA/custom_components/steamvr ~/.homeassistant/custom_components/steamvr
    ```
 
 #### Copy method
 
 1. Download [ZIP](https://github.com/Antoni-Czaplicki/SteamVR.HA/archive/master.zip) with the code.
 2. Unpack it.
-3. Copy the `custom_components/toyota/` from the unpacked archive to `custom_components`
+3. Copy the `custom_components/steamvr/` from the unpacked archive to `custom_components`
    in your Home Assistant configuration directory.
 
 </details>
