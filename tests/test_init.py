@@ -2,6 +2,7 @@
 # ruff: noqa: INP001
 
 import asyncio
+from collections.abc import AsyncIterator
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -89,6 +90,31 @@ async def test_current_agent_state_payload(hass: HomeAssistant) -> None:
     assert isinstance(coordinator.data.left_controller, VRController)
 
 
+async def test_current_agent_disconnected_state_payload(
+    hass: HomeAssistant,
+) -> None:
+    """Test null controllers in the Agent's disconnected payload."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+    coordinator = SteamVRCoordinator(hass, entry, "ws://127.0.0.1:8077")
+
+    await coordinator.on_message(
+        json.dumps(
+            {
+                "type": "state",
+                "is_steamvr_process_running": False,
+                "is_openvr_connected": False,
+                "right_controller": None,
+                "left_controller": None,
+            }
+        )
+    )
+
+    assert isinstance(coordinator.data, VRState)
+    assert coordinator.data.is_openvr_connected is False
+    assert coordinator.data.right_controller == VRController()
+    assert coordinator.data.left_controller == VRController()
+
+
 def test_dataclass_parser_ignores_unknown_fields() -> None:
     """Test future Agent fields do not make the parser return a dictionary."""
     state = dataclass_from_dict(
@@ -101,6 +127,57 @@ def test_dataclass_parser_ignores_unknown_fields() -> None:
 
     assert isinstance(state, VRState)
     assert state.is_openvr_connected is True
+
+
+async def test_coordinator_recovers_from_bad_message_and_reconnects(
+    hass: HomeAssistant,
+) -> None:
+    """Test message errors and connection closure do not stop the listener."""
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    coordinator = SteamVRCoordinator(hass, entry, "ws://127.0.0.1:8077")
+    message_received = asyncio.Event()
+    first_websocket = AsyncMock()
+    first_websocket.__aiter__.return_value = iter(("not valid JSON",))
+    second_websocket = AsyncMock()
+
+    async def messages() -> AsyncIterator[str]:
+        yield json.dumps(
+            {
+                "type": "state",
+                "is_openvr_connected": True,
+            }
+        )
+        await asyncio.Future()
+
+    second_websocket.__aiter__.side_effect = messages
+    first_connection = AsyncMock()
+    first_connection.__aenter__.return_value = first_websocket
+    first_connection.__aexit__.return_value = False
+    second_connection = AsyncMock()
+    second_connection.__aenter__.return_value = second_websocket
+    second_connection.__aexit__.return_value = False
+    original_on_message = coordinator.on_message
+
+    async def record_message(message: str | bytes) -> None:
+        await original_on_message(message)
+        message_received.set()
+
+    with (
+        patch(
+            "custom_components.steamvr.websockets.connect",
+            side_effect=[first_connection, second_connection],
+        ) as connect,
+        patch("custom_components.steamvr.RECONNECT_DELAY", 0),
+        patch.object(coordinator, "on_message", side_effect=record_message),
+    ):
+        websocket_task = asyncio.create_task(coordinator.run_server())
+        coordinator._websocket_task = websocket_task  # noqa: SLF001
+        await asyncio.wait_for(message_received.wait(), 1)
+
+    assert connect.call_count == 2
+    assert coordinator.data.is_openvr_connected is True
+
+    await coordinator.async_shutdown()
 
 
 async def test_coordinator_shutdown(hass: HomeAssistant) -> None:

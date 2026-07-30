@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/Antoni-Czaplicki/SteamVR.HA/issues",
   "loggers": ["steamvr"],
   "requirements": ["websockets>=14.0,<16.0"],
-  "version": "0.6.0"
+  "version": "0.6.1"
 }

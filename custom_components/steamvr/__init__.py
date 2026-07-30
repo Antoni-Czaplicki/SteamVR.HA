@@ -2,7 +2,7 @@
 
 import asyncio
 from contextlib import suppress
-from dataclasses import fields
+from dataclasses import fields, is_dataclass
 import json
 import logging
 from typing import override
@@ -25,6 +25,7 @@ from .services import async_setup_actions
 from .utils import denormalize_vr_event_name, normalize_vr_event_name
 
 _LOGGER = logging.getLogger(__name__)
+RECONNECT_DELAY = 5
 PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
@@ -92,24 +93,38 @@ class SteamVRCoordinator(DataUpdateCoordinator[VRState]):
 
     async def run_server(self) -> None:
         """Connect to the websocket server."""
-        async for websocket in websockets.connect(self.url):
-            if self._stopping:
-                await websocket.close()
-                break
-
+        while not self._stopping:
             try:
-                self.websocket = websocket
-                async for message in websocket:
-                    await self.on_message(message)
-            except websockets.ConnectionClosed:
-                pass
+                await self._connect_and_listen()
+            except (OSError, TimeoutError, websockets.WebSocketException) as err:
+                if not self._stopping:
+                    _LOGGER.debug(
+                        "SteamVR Agent connection lost; retrying in %s seconds: %s",
+                        RECONNECT_DELAY,
+                        err,
+                    )
+            except Exception:
+                if not self._stopping:
+                    _LOGGER.exception(
+                        "Unexpected SteamVR connection error; retrying in %s seconds",
+                        RECONNECT_DELAY,
+                    )
             finally:
-                if self.websocket is websocket:
-                    self.websocket = None
+                self.websocket = None
                 self.async_set_updated_data(VRState(is_openvr_connected=False))
 
-            if self._stopping:
-                break
+            if not self._stopping:
+                await asyncio.sleep(RECONNECT_DELAY)
+
+    async def _connect_and_listen(self) -> None:
+        """Connect to the Agent and process messages until disconnected."""
+        async with websockets.connect(self.url) as websocket:
+            self.websocket = websocket
+            async for message in websocket:
+                try:
+                    await self.on_message(message)
+                except Exception:
+                    _LOGGER.exception("Error handling message from the SteamVR Agent")
 
     @override
     async def async_shutdown(self) -> None:
@@ -246,6 +261,8 @@ def dataclass_from_dict(_class, data):
         fieldtypes = {f.name: f.type for f in fields(_class)}
     except TypeError:
         return data
+    if not isinstance(data, dict):
+        return _class() if is_dataclass(_class) else data
     return _class(
         **{
             key: dataclass_from_dict(fieldtypes[key], value)
