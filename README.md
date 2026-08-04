@@ -17,6 +17,7 @@ Integration that lets you monitor and control your SteamVR setup (HTC Vive, Valv
 
 ### Prerequisites
 
+Home Assistant 2026.8.0 or newer is required.
 Install [Home Assistant Agent for SteamVR](https://github.com/Antoni-Czaplicki/SteamVR.HA-Agent) on the PC that you are using with your VR
 
 ### HACS installation (Recommended)
